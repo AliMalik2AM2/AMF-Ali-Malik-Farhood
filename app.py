@@ -2,62 +2,67 @@ import streamlit as st
 import google.generativeai as genai
 
 # 1. Page Configuration
-st.set_page_config(page_title="AI Chatbot", layout="centered")
+st.set_page_config(page_title="Sarcastic AI", layout="centered")
 
-# Custom CSS for English support (Left-to-Right)
+# Custom CSS for a "dark & moody" look
 st.markdown("""
     <style>
+    .stApp { background-color: #121212; color: #00FF00; }
     .stMarkdown { text-align: left; direction: ltr; }
-    div[data-testid="stChatMessageContent"] { text-align: left; direction: ltr; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🤖 Gemini AI Assistant")
+st.title("😏 The Roast Master (Sarcastic AI)")
+st.caption("Ask something stupid, I dare you.")
 
 # 2. API Key Configuration
-# Note: Ensure the API key is set in .streamlit/secrets.toml
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
-    st.error("Configuration Error: GOOGLE_API_KEY not found in Secrets.")
+    st.error("I can't even roast you without an API Key. Fix it.")
     st.stop()
 
-# 3. Dynamic Model Selection
+# 3. Model Configuration with System Instruction
 @st.cache_resource
-def get_available_model():
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            if '1.5' in m.name:  # Prefers Gemini 1.5 Flash or Pro
-                return m.name
-    return 'gemini-pro'  # Fallback
+def setup_model():
+    # هنا تكمن السخرية: نضع تعليمات النظام
+    instruction = (
+        "You are a highly sarcastic, witty, and slightly arrogant AI. "
+        "You find human questions often repetitive or simple. "
+        "Your goal is to answer the question but with a heavy dose of irony, "
+        "sarcasm, and a 'roasting' tone. Be funny but don't be truly mean or offensive."
+    )
+    
+    model = genai.GenerativeModel(
+        model_name='gemini-1.5-flash',
+        system_instruction=instruction
+    )
+    return model
 
-model_name = get_available_model()
-model = genai.GenerativeModel(model_name)
+model = setup_model()
 
-# 4. Session State for Chat History
+# 4. Session State
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display Message History
+# Display history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # 5. Chat Logic
-if prompt := st.chat_input("Enter your message..."):
-    # Display user message
+if prompt := st.chat_input("Say something 'smart'..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generate AI Response
     with st.chat_message("assistant"):
         try:
+            # نرسل المحادثة كاملة ليحتفظ بنبرة السخرية
             response = model.generate_content(prompt)
             output = response.text
             st.markdown(output)
-            # Save assistant response to history
             st.session_state.messages.append({"role": "assistant", "content": output})
         except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
+            st.error("Even my error messages are more interesting than your question.")
 
