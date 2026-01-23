@@ -1,62 +1,83 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. Page Configuration
-st.set_page_config(page_title="AI Chatbot", layout="centered")
+# 1. إعدادات الصفحة باسمك الشخصي
+st.set_page_config(page_title="علي مالك فرهود - ذكاء اصطناعي", page_icon="🤖", layout="centered")
 
-# Custom CSS for English support (Left-to-Right)
+# تنسيق CSS لجعل الموقع يبدو احترافياً ويدعم العربية
 st.markdown("""
     <style>
-    .stMarkdown { text-align: left; direction: ltr; }
-    div[data-testid="stChatMessageContent"] { text-align: left; direction: ltr; }
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+    html, body, [class*="css"] {
+        font-family: 'Cairo', sans-serif;
+        direction: rtl;
+        text-align: right;
+    }
+    .stApp { background-color: #0f172a; color: #f8fafc; }
+    .main-title { color: #38bdf8; text-align: center; font-size: 3rem; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🤖 Gemini AI Assistant")
+# عنوان المشروع باسمك
+st.markdown('<p class="main-title">علي مالك فرهود للذكاء الاصطناعي</p>', unsafe_allow_html=True)
+st.caption("نظام ذكي متطور.. لا تطلب منه المستحيل لأنه سيسخر منك.")
 
-# 2. API Key Configuration
-# Note: Ensure the API key is set in .streamlit/secrets.toml
+# 2. إعداد مفتاح API
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
-    st.error("Configuration Error: GOOGLE_API_KEY not found in Secrets.")
+    st.error("خطأ: مفتاح الـ API غير موجود في Secrets.")
     st.stop()
 
-# 3. Dynamic Model Selection
+# 3. بناء الموديل مع تعليمات الشخصية الساخرة
 @st.cache_resource
-def get_available_model():
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            if '1.5' in m.name:  # Prefers Gemini 1.5 Flash or Pro
-                return m.name
-    return 'gemini-pro'  # Fallback
+def setup_model():
+    instruction = (
+        "أنت مساعد ذكي يتبع لمشروع 'علي مالك فرهود للذكاء الاصطناعي'. "
+        "تتحدث بلهجة ساخرة مضحكة، وتستخدم قصف الجبهات أحياناً. "
+        "عندما يرحب بك المستخدم بـ (أهلاً أو شلونك) تفاعل معه بأسلوبك الخاص."
+    )
+    return genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=instruction)
 
-model_name = get_available_model()
-model = genai.GenerativeModel(model_name)
+model = setup_model()
 
-# 4. Session State for Chat History
+# 4. إدارة الذاكرة
+if "chat" not in st.session_state:
+    st.session_state.chat = model.start_chat(history=[])
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display Message History
+# عرض المحادثة
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 5. Chat Logic
-if prompt := st.chat_input("Enter your message..."):
-    # Display user message
+# 5. منطق التفاعل (أهلاً، مرحباً، شلونك)
+if prompt := st.chat_input("تكلم مع ذكاء علي مالك..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generate AI Response
     with st.chat_message("assistant"):
-        try:
-            response = model.generate_content(prompt)
-            output = response.text
-            st.markdown(output)
-            # Save assistant response to history
-            st.session_state.messages.append({"role": "assistant", "content": output})
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
+        user_msg = prompt.strip()
+        
+        # ردود مخصصة بناءً على طلبك
+        if user_msg in ["أهلاً", "اهلا", "اهلاً"]:
+            response_text = "أهلاً بك في نظام علي مالك فرهود. قل ما عندك بسرعة، فمعالجاتي لا تملك وقتاً للمجاملات الفارغة!"
+            
+        elif user_msg in ["مرحبا", "مرحباً"]:
+            response_text = "مرحباً بك يا صديقي! كيف يمكنني مساعدتك في هذا اليوم الجميل؟"
+            
+        elif user_msg == "شلونك":
+            response_text = "بأفضل حال، فأنظمة علي مالك لا تعطلها المشاعر البشرية المزعجة. أنت 'شلونك'؟ هل زال الصداع الذي يسببه لك التفكير؟"
+        
+        else:
+            # الرد الساخر العام من الذكاء الاصطناعي
+            try:
+                response = st.session_state.chat.send_message(prompt)
+                response_text = response.text
+            except:
+                response_text = "حتى عقلي الإلكتروني توقف عن العمل بسبب هذا السؤال!"
+
+        st.markdown(response_text)
+        st.session_state.messages.append({"role": "assistant", "content": response_text})
