@@ -1,83 +1,65 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. إعدادات الصفحة باسمك الشخصي
-st.set_page_config(page_title="علي مالك فرهود - ذكاء اصطناعي", page_icon="🤖", layout="centered")
+# 1. Page Configuration
+# تم تغيير الاسم هنا ليظهر في المتصفح
+st.set_page_config(page_title="علي مالك فرهود للذكاء الاصطناعي", layout="centered")
 
-# تنسيق CSS لجعل الموقع يبدو احترافياً ويدعم العربية
+# Custom CSS
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-    html, body, [class*="css"] {
-        font-family: 'Cairo', sans-serif;
-        direction: rtl;
-        text-align: right;
-    }
-    .stApp { background-color: #0f172a; color: #f8fafc; }
-    .main-title { color: #38bdf8; text-align: center; font-size: 3rem; font-weight: bold; }
+    .stMarkdown { text-align: right; direction: rtl; }
+    div[data-testid="stChatMessageContent"] { text-align: right; direction: rtl; }
     </style>
     """, unsafe_allow_html=True)
 
-# عنوان المشروع باسمك
-st.markdown('<p class="main-title">علي مالك فرهود للذكاء الاصطناعي</p>', unsafe_allow_html=True)
-st.caption("نظام ذكي متطور.. لا تطلب منه المستحيل لأنه سيسخر منك.")
+# تغيير العنوان الرئيسي للمشروع
+st.title("🤖 علي مالك فرهود للذكاء الاصطناعي")
 
-# 2. إعداد مفتاح API
+# 2. API Key Configuration
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
-    st.error("خطأ: مفتاح الـ API غير موجود في Secrets.")
+    st.error("Configuration Error: GOOGLE_API_KEY not found in Secrets.")
     st.stop()
 
-# 3. بناء الموديل مع تعليمات الشخصية الساخرة
+# 3. Dynamic Model Selection
 @st.cache_resource
-def setup_model():
-    instruction = (
-        "أنت مساعد ذكي يتبع لمشروع 'علي مالك فرهود للذكاء الاصطناعي'. "
-        "تتحدث بلهجة ساخرة مضحكة، وتستخدم قصف الجبهات أحياناً. "
-        "عندما يرحب بك المستخدم بـ (أهلاً أو شلونك) تفاعل معه بأسلوبك الخاص."
-    )
-    return genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=instruction)
+def get_available_model():
+    # إضافة تعليمات النظام ليكون الروبوت تفاعلياً وذكياً
+    instruction = "أنت مساعد ذكي متطور ضمن مشروع علي مالك فرهود للذكاء الاصطناعي. رد على المستخدم بذكاء وتفاعل معه بناءً على رسائله السابقة."
+    return genai.GenerativeModel('gemini-1.5-flash', system_instruction=instruction)
 
-model = setup_model()
+model = get_available_model()
 
-# 4. إدارة الذاكرة
-if "chat" not in st.session_state:
-    st.session_state.chat = model.start_chat(history=[])
+# 4. Session State for Chat History (هنا السر في التفاعل)
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# عرض المحادثة
+# إنشاء جلسة شات تحتفظ بالذاكرة
+if "chat_session" not in st.session_state:
+    st.session_state.chat_session = model.start_chat(history=[])
+
+# Display Message History
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 5. منطق التفاعل (أهلاً، مرحباً، شلونك)
-if prompt := st.chat_input("تكلم مع ذكاء علي مالك..."):
+# 5. Chat Logic
+if prompt := st.chat_input("تحدث مع ذكاء علي مالك..."):
+    # Display user message
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Generate AI Response
     with st.chat_message("assistant"):
-        user_msg = prompt.strip()
-        
-        # ردود مخصصة بناءً على طلبك
-        if user_msg in ["أهلاً", "اهلا", "اهلاً"]:
-            response_text = "أهلاً بك في نظام علي مالك فرهود. قل ما عندك بسرعة، فمعالجاتي لا تملك وقتاً للمجاملات الفارغة!"
-            
-        elif user_msg in ["مرحبا", "مرحباً"]:
-            response_text = "مرحباً بك يا صديقي! كيف يمكنني مساعدتك في هذا اليوم الجميل؟"
-            
-        elif user_msg == "شلونك":
-            response_text = "بأفضل حال، فأنظمة علي مالك لا تعطلها المشاعر البشرية المزعجة. أنت 'شلونك'؟ هل زال الصداع الذي يسببه لك التفكير؟"
-        
-        else:
-            # الرد الساخر العام من الذكاء الاصطناعي
-            try:
-                response = st.session_state.chat.send_message(prompt)
-                response_text = response.text
-            except:
-                response_text = "حتى عقلي الإلكتروني توقف عن العمل بسبب هذا السؤال!"
-
-        st.markdown(response_text)
-        st.session_state.messages.append({"role": "assistant", "content": response_text})
+        try:
+            # استخدام chat_session بدلاً من generate_content يجعل الروبوت يتفاعل ويتذكر
+            response = st.session_state.chat_session.send_message(prompt)
+            output = response.text
+            st.markdown(output)
+            # Save assistant response to history
+            st.session_state.messages.append({"role": "assistant", "content": output})
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
