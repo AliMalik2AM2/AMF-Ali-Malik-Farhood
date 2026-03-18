@@ -1,4 +1,5 @@
 import streamlit as st
+model = genai.GenerativeModel('gemini-1.5-flash')
 import google.generativeai as genai
 
 # 1. إعداد واجهة التطبيق
