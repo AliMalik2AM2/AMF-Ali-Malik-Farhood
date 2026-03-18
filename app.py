@@ -1,66 +1,70 @@
 import streamlit as st
-model = genai.GenerativeModel('gemini-1.5-flash')
 import google.generativeai as genai
 
-# 1. إعداد واجهة التطبيق
-st.set_page_config(page_title="مستشارك الصحي الذكي", page_icon="⚖️")
-st.title("⚖️ حاسبة الوزن المثالي والذكاء الاصطناعي")
-st.write("أدخل بياناتك للحصول على تحليل دقيق ونصيحة ذكية")
+# 1. إعدادات الصفحة والواجهة (Page Config)
+st.set_page_config(page_title="AI Health Advisor", page_icon="⚖️")
+st.title("⚖️ AI BMI Calculator")
+st.write("Enter your details for a fast AI health analysis.")
 
-# 2. تفعيل نموذج Gemini 1.5 Flash
+# 2. ربط المفتاح السري وتحديد الموديل السريع (The Engine)
 try:
-    # سحب المفتاح من Secrets
+    # جلب المفتاح من إعدادات Secrets في Streamlit
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
     
-    # تحديد الموديل 1.5 فلاش
+    # تحديد موديل 1.5 فلاش لضمان السرعة القصوى
     model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
-    st.error("⚠️ تأكد من وضع GEMINI_API_KEY في إعدادات Secrets بشكل صحيح")
+    st.error("⚠️ API Key is missing or invalid in Secrets!")
 
-# 3. مدخلات المستخدم
+# 3. خانات إدخال البيانات (User Inputs)
 col1, col2 = st.columns(2)
 with col1:
-    weight = st.number_input("الوزن (كيلوجرام):", min_value=1.0, value=75.0)
+    weight = st.number_input("Weight (kg):", min_value=1.0, value=75.0, step=0.1)
 with col2:
-    height_cm = st.number_input("الطول (سنتيمتر):", min_value=1.0, value=175.0)
+    height_cm = st.number_input("Height (cm):", min_value=1.0, value=175.0, step=1.0)
 
-# 4. الحسابات والمنطق
-if st.button("حلل بياناتي الآن 🚀"):
+# 4. زر الحساب واستدعاء الذكاء الاصطناعي
+if st.button("Analyze My Data 🚀"):
+    # حساب مؤشر كتلة الجسم
     height_m = height_cm / 100
     bmi = weight / (height_m ** 2)
     
     st.divider()
-    st.subheader(f"مؤشر كتلة جسمك هو: {bmi:.2f}")
+    st.subheader(f"Your BMI is: {bmi:.2f}")
     
-    # تحديد الحالة
+    # تحديد الحالة الصحية بالألوان
     if bmi < 18.5:
-        st.warning("الحالة: نحافة")
+        status, color = "Underweight", "orange"
+        st.warning(f"Status: {status}")
     elif 18.5 <= bmi < 25:
-        st.success("الحالة: وزن مثالي!")
+        status, color = "Healthy Weight", "green"
+        st.success(f"Status: {status}")
     elif 25 <= bmi < 30:
-        st.info("الحالة: زيادة في الوزن")
+        status, color = "Overweight", "blue"
+        st.info(f"Status: {status}")
     else:
-        st.error("الحالة: سمنة")
+        status, color = "Obese", "red"
+        st.error(f"Status: {status}")
 
-    # 5. استدعاء الذكاء الاصطناعي (النصيحة)
-    with st.spinner('⏳ جاري استشارة Gemini 1.5 Flash...'):
+    # استشارة Gemini 1.5 Flash (سرعة البرق)
+    with st.spinner('⏳ Consulting Gemini 1.5 Flash...'):
         try:
-            prompt = f"أنا وزني {weight} وطولي {height_cm} ومؤشر كتلة جسمي {bmi:.2f}. " \
-                     f"أعطني نصيحة صحية واحدة مختصرة جداً باللغة العربية."
+            # إرسال البيانات للموديل وطلب نصيحة قصيرة جداً
+            prompt = f"I am {weight}kg and {height_cm}cm tall. BMI: {bmi:.2f} ({status}). Give me one professional 10-word health tip in English."
             response = model.generate_content(prompt)
-            st.chat_message("assistant").write(response.text)
-        except:
-            st.error("فشل الاتصال بالذكاء الاصطناعي، جرب مرة أخرى.")
+            st.markdown("---")
+            st.success("💡 AI Health Tip:")
+            st.write(response.text)
+        except Exception as e:
+            st.error("AI is busy right now. Please try again.")
 
-# 6. إضافة جدول التصنيفات العالمي (آخر كود طلبته)
+# 5. جدول المراجع العالمي (BMI Table)
 st.markdown("---")
-st.subheader("📊 مرجع تصنيفات BMI العالمي")
-
-# إنشاء جدول البيانات
+st.subheader("📊 Global BMI Categories")
 st.table({
-    "الفئة": ["نحافة مفرطة", "وزن مثالي", "زيادة وزن", "سمنة (درجة 1)", "سمنة مفرطة"],
-    "نطاق المؤشر (BMI)": ["أقل من 18.5", "18.5 - 24.9", "25 - 29.9", "30 - 34.9", "35 فأكثر"]
+    "Category": ["Underweight", "Healthy Weight", "Overweight", "Obese"],
+    "BMI Range": ["Below 18.5", "18.5 – 24.9", "25.0 – 29.9", "30.0 and above"]
 })
 
-st.caption("ملاحظة: هذا المؤشر تقديري ولا يأخذ بعين الاعتبار الكتلة العضلية.")
+st.caption("Note: This app is for informational purposes and uses Gemini 1.5 Flash.")
