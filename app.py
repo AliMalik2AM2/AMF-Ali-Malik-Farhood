@@ -1,41 +1,60 @@
 import streamlit as st
 import google.generativeai as genai
 
-# إعدادات الصفحة
-st.set_page_config(page_title="حاسبة الوزن الذكية", page_icon="⚖️")
+# 1. إعدادات الصفحة والواجهة
+st.set_page_config(page_title="مستشارك الصحي الذكي", page_icon="🏃‍♂️")
 
-# ربط المفتاح السري الذي وضعته في Secrets
+# 2. تفعيل الذكاء الاصطناعي (Gemini)
 try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    api_key = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=api_key)
+    # استخدمنا فلاش لأنه أسرع بكثير في الرد
     model = genai.GenerativeModel('gemini-1.5-flash')
-except Exception as e:
-    st.error("تأكد من وضع المفتاح السري بشكل صحيح في إعدادات Streamlit")
+except:
+    st.error("⚠️ خطأ في إعدادات المفتاح السري (Secrets)")
 
-st.title("⚖️ حاسبة الوزن المثالي بالذكاء الاصطناعي")
-st.write("أدخل بياناتك لنقدم لك تحليلاً ذكياً")
+st.title("⚖️ حاسبة الوزن المثالي الذكية")
+st.markdown("---")
 
-# مدخلات المستخدم
-weight = st.number_input("الوزن (كيلوجرام):", min_value=1.0, value=70.0)
-height_cm = st.number_input("الطول (سنتيمتر):", min_value=1.0, value=170.0)
+# 3. إدخال البيانات في أعمدة
+col1, col2 = st.columns(2)
+with col1:
+    weight = st.number_input("الوزن (كيلوجرام):", min_value=10.0, value=75.0, step=0.1)
+with col2:
+    height_cm = st.number_input("الطول (سنتيمتر):", min_value=50.0, value=175.0, step=1.0)
 
-if st.button("احسب النتيجة واطلب نصيحة ذكية"):
-    # حساب BMI
+# 4. زر التنفيذ والحساب
+if st.button("حلل بياناتي الآن 🚀"):
     height_m = height_cm / 100
     bmi = weight / (height_m ** 2)
     
-    st.subheader(f"مؤشر كتلة جسمك هو: {bmi:.2f}")
-    
-    # تصنيف الحالة
-    if bmi < 18.5: status = "نحافة"
-    elif 18.5 <= bmi < 25: status = "وزن مثالي"
-    elif 25 <= bmi < 30: status = "زيادة في الوزن"
-    else: status = "سمنة"
-    
-    st.info(f"حالتك هي: {status}")
+    st.divider()
+    st.subheader(f"مؤشر كتلة جسمك (BMI) هو: {bmi:.2f}")
 
-    # استشارة الذكاء الاصطناعي
-    with st.spinner('جاري استشارة Gemini...'):
-        prompt = f"أنا وزني {weight} كجم وطولي {height_cm} سم، وحالتي هي {status}. أعطني نصيحة صحية واحدة مختصرة باللغة العربية."
-        response = model.generate_content(prompt)
-        st.success("💡 نصيحة الذكاء الاصطناعي:")
-        st.write(response.text)
+    # تحديد الحالة بالألوان
+    if bmi < 18.5:
+        st.warning("الحالة: نحافة")
+    elif 18.5 <= bmi < 25:
+        st.success("الحالة: وزن مثالي! حافظ على نمط حياتك.")
+    elif 25 <= bmi < 30:
+        st.info("الحالة: زيادة في الوزن")
+    else:
+        st.error("الحالة: سمنة")
+
+    # 5. استشارة الذكاء الاصطناعي
+    with st.spinner('⏳ جاري طلب نصيحة مخصصة من Gemini...'):
+        try:
+            prompt = f"أنا شخص وزني {weight} كجم وطولي {height_cm} سم ومؤشر كتلة جسمي {bmi:.2f}. أعطني نصيحة صحية واحدة " \
+                     f"مختصرة جداً ومحفزة باللغة العربية."
+            response = model.generate_content(prompt)
+            st.chat_message("assistant").write(response.text)
+        except:
+            st.error("تعذر الاتصال بالذكاء الاصطناعي حالياً.")
+
+# 6. إضافة جدول المراجع في الأسفل بشكل جميل
+st.markdown("---")
+st.subheader("📊 مرجع تصنيفات الوزن العالمي")
+st.table({
+    "التصنيف": ["نحافة", "وزن مثالي", "زيادة وزن", "سمنة مفرطة"],
+    "مؤشر الـ BMI": ["أقل من 18.5", "18.5 - 24.9", "25 - 29.9", "30 فأكثر"]
+})
